@@ -1,4 +1,4 @@
-COPYRIGHT = '''Copyright (C)2024, by maxpat78. GNU GPL v2 applies.'''
+COPYRIGHT = '''Copyright (C)2024, by maxpat78.'''
 
 __all__ = ["split", "quote", "join"]
 
