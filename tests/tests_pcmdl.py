@@ -1,25 +1,45 @@
 from w32_lex import *
 
 # Requires mslex and Windows to compare results
-import mslex
 
-import ctypes
+from ctypes import *
 from ctypes import windll, wintypes
 
 CommandLineToArgvW = windll.shell32.CommandLineToArgvW
-CommandLineToArgvW.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(ctypes.c_int)]
-CommandLineToArgvW.restype = ctypes.POINTER(wintypes.LPWSTR)
+CommandLineToArgvW.argtypes = [wintypes.LPCWSTR, POINTER(c_int)]
+CommandLineToArgvW.restype = POINTER(wintypes.LPWSTR)
 
 LocalFree = windll.kernel32.LocalFree
 LocalFree.argtypes = [wintypes.HLOCAL]
 LocalFree.restype = wintypes.HLOCAL
 
 def ctypes_split(s):
-    argc = ctypes.c_int()
-    argv = CommandLineToArgvW("foo.exe " + s, ctypes.byref(argc))
-    result = [argv[i] for i in range(1, argc.value)]
+    argc = c_int()
+    argv = CommandLineToArgvW(s, byref(argc))
+    result = [argv[i] for i in range(0, argc.value)]
     LocalFree(argv)
     return result
+
+stdargv = CDLL('.\\STDARGV98.dll')
+stdargv = CDLL('.\\STDARGV2008.dll')
+#~ stdargv = CDLL('.\\STDARGV2015.dll')
+
+def parse_cmdline(s):
+    numargs = c_int(0)
+    numchars = c_int(0)
+    cmdline = create_string_buffer(s.encode())
+    # void parse_cmdline(char *cmdstart, char **argv, char *args, int *numargs, int *numchars);
+    stdargv.parse_cmdline(cmdline, c_void_p(0), c_char_p(0), byref(numargs), byref(numchars))
+
+    argv = (c_char_p * numargs.value)()
+    args = create_string_buffer(numchars.value)
+    stdargv.parse_cmdline(cmdline, argv, args, byref(numargs), byref(numchars))
+
+    # build a result list similar to ctypes_split
+    r = []
+    for i in range(0, numargs.value-1): # omit first command name (fake) and last NULL (None)
+        r += [argv[i].decode()] # returns str, not bytes
+    return r
 
 # from https://github.com/smoofra/mslex
 examples = [
@@ -270,18 +290,17 @@ examples = [
 n=0
 m = 0
 for ex in examples:
-    a, b, c = split(ex[0]), mslex.split(ex[0],0), ctypes_split(ex[0])
-    assert b==c
+    exe = "foo.exe "
+    a, b, c = split(exe+ex[0], 3), parse_cmdline(exe+ex[0]), ctypes_split(exe+ex[0])
     if a != b:
-        print ('%s differ from mslex: case=<%s> --> res=<%s>' %(a,ex[0],ex[1]))
-        n += 1
-    d = split(join(a))
-    if d != a:
-        print('quote failed on <%s>: quoted=<%s>, splitted=<%s>, orig=<%s>' % (a,s,d,ex[0]))
-        m += 1
+        print ('case=<%s>: split!=parse_cmdline: %s != %s' %(ex[0],a,b))
+        n+=1
+    if b != c:
+        print ('case=<%s>: parse_cmdline!=ctypes_split: %s != %s' %(ex[0],b,c))
+        m+=1
 if n:
-    print('%d/%d tests failed (split)' % (n,len(examples)))
+    print('%d/%d tests failed (split!=parse_cmdline)' % (n,len(examples)))
 if m:
-    print('%d/%d tests failed (quote)' % (m,len(examples)))
+    print('%d/%d tests failed (parse_cmdline!=ctypes_split)' % (m,len(examples)))
 if not m and not n:
     print('All %d tests passed!'%len(examples))
