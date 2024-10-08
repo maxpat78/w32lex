@@ -98,11 +98,7 @@ def split(s, mode=0):
 
 def quote(s):
     "Quote a string in a way suitable for the split function"
-    quoted = 0      # if current argument is quoted
     backslashes = 0 # backslashes in a row
-    quotes = 0      # quotes in a row
-    space = 0       # whitespace in a row
-    print('quoting <%s>' %s)
     if not s: return '""'
     arg = ''
     for c in s:
@@ -127,7 +123,6 @@ def quote(s):
         # double at end, since we quote hereafter
         arg += (2*backslashes)*'\\'
     arg = '"'+arg+'"' # always quote argument
-    print('quoted <%s> -> <%s>' % (s,arg))
     return arg
 
 def join(argv):
