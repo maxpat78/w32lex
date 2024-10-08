@@ -23,7 +23,7 @@ At a glance, a compatible modern Win32 parser follows such rules when splitting 
 - all other characters are simply copied
 
 `split` accepts an optional argument `mode` to set the compatibility level:
-with mode=0 (default), it behaves link mslex parser; if mode&1, first argument
+with mode=0 (default), it behaves like mslex parser; if mode&1, first argument
 is parsed in a simplified way (i.e. argument is everything up to the first space if
 unquoted, or the second quote otherwise); if mode&2, emulate parse_cmdline from
 2005 onward (a `""` inside a quoted block emit a literal quote _without_ ending
