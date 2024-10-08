@@ -6,7 +6,7 @@ __all__ = ["split", "quote", "join"]
 def split(s, mode=0):
     """Split a command line like CommandLineToArgvW (SHELL32) or parse_cmdline
     (VC Runtime). With mode&1, do special simplified parsing for first argument;
-    with mode&2, emulate 2008 and newer parse_cmdline."""
+    with mode&2, emulate 2005 and newer parse_cmdline."""
     argv = []       # resulting arguments list
     arg = ''        # current argument
     quoted = 0      # if current argument is quoted
