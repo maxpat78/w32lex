@@ -34,9 +34,9 @@ w32_cmd
 
 This experimental module tries to provide a conformant CMD parser with `cmd_parse`.
 
-Some annotations about a Windows Command Prompt (CMD) parser.
+Some annotations about a Windows Command Prompt (CMD) parser follow.
 
-CMD itself parses the command line before invoking commands, in an indipendent
+CMD itself parses the command line _before_ invoking commands, in an indipendent
 way from `parse_cmdline` (used internally by C apps).
 
 With the help of a simple C Windows app, we can look at the command line that 
@@ -53,26 +53,26 @@ The results we see, show that the parsing work CMD carries on is not trivial,
 not always clear and not constant in time. Some points:
 
 - `:` at line start makes the parser ignore the rest (Windows 2000+) or signal an error;
-- ` ;,=@` and <TAB> (one or more) at line start are ignored;
-- `@` at line start is special char in batch (line echo off);
+- ` ;,=@` and <TAB> (one or more) at line start are ignored but
+- a starting `@` is a special character in BAT scripts (=line echo off);
 - `|&<>`, and their doubled counterparts, are forbidden at line start;
 - `()` at line start is forbidden;
 - `^` escapes the character following;
 - pipe `|`, redirection `<, <<, >, >>` and boolean operators `&, &&, ||` split
 a line in subparts, since one or more commands have to be issued; white space
-is not needed between them;
+is not needed around them;
 - longer or different sequences of pipe, redirection or boolean operators are
 forbidden;
 - `%var%` or `^%var%` are replaced with the corresponding environment variable,
 if set (while `^%var^%` and `%var^%` are both considered escaped);
 - all the other characters are simply copied and passed to the external
-commands; if the internal ones are targeted, further/different processing could
+commands. If the internal ones are targeted, further/different processing could
 occur; the same if special CMD environment variables are set.
 
 Some curious samples:
 - `&a [b (c ;d !e %f ^g ,h =i` are valid file system names
 - `^ a` calls " a" (Windows 2000+) or ignores the line
-- `^;;a` calls ";" passing argument ";a" (Windows 2000+) or ignores the line
+- `^;;a` calls ";" passing argument ";a" (Windows 2000+; the same with `,=` characters) or ignores the line
 - given a `;d` file (the same with `,h` and `=i`):
   * `dir;d` -> not found
   * `dir ;d`  -> not found
