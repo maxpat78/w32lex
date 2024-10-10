@@ -58,6 +58,8 @@ not always clear and not constant in time. Some points:
 - `|&<>`, and their doubled counterparts, are forbidden at line start;
 - `()` at line start is forbidden;
 - `^` escapes the character following;
+- `"` starts/ends a quoted block, escaping all special characters except `%`
+(and quote is copied; starting quote can be escaped);
 - pipe `|`, redirection `<, <<, >, >>` and boolean operators `&, &&, ||` split
 a line in subparts, since one or more commands have to be issued; white space
 is not needed around them;
@@ -79,12 +81,12 @@ Some curious samples:
   * `dir ^;d` -> not found
   * `dir ";d"` -> OK
   * `dir "?d"` -> OK
-- `dir ^>b` -> lists [b file above (!?), but using our simple Windows app we
+- `dir ^>b` -> lists `[b` file above (!?), but using our simple Windows app we
 find that `>b` was passed literally, as expected
 
 Things get even more complex if we take in account old DOS COMMAND.COM:
 - a starting `@` outside batches is forbidden
 - `^` is not recognized
 - only a single `;,=` at line start is ignored
-- `:` at line start is ignored (Windows 95+)
+- `:` at line start is ignored (Windows 95+) or is bad
 - `&, &&, ||` operators and parentheses `()` are not recognized

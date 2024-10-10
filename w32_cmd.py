@@ -14,6 +14,7 @@ class NotExpected(Exception):
 def cmd_parse(s):
     "Pre-process a command line like Windows CMD Command Prompt"
     escaped = 0
+    quoted = 0
     percent = 0
     meta = 0 # special chars in a row
     arg = ''
@@ -38,14 +39,16 @@ def cmd_parse(s):
     while i < len(s):
         c = s[i]
         i += 1
+        if c == '"':
+            if not escaped: quoted = not quoted
         if c == '^':
-            if escaped:
+            if escaped or quoted:
                 arg += c
                 escaped = 0
             else:
                 escaped = 1
             continue
-        # %VAR%   -> replace with os.environ['VAR'] *if set*
+        # %VAR%   -> replace with os.environ['VAR'] *if set* and even if quoted
         # ^%VAR%  -> same as above
         # %VAR^%
         # ^%VAR^% -> keep literal %VAR%
@@ -65,7 +68,7 @@ def cmd_parse(s):
         # pipe, redirection, &, && and ||: break argument, and set aside special char/couple
         # multiple pipe, redirection, &, && and || in sequence are forbidden
         if c in '|<>&':
-            if escaped:
+            if escaped or quoted:
                 arg += c
                 escaped = 0
                 continue
@@ -127,6 +130,8 @@ if __name__ == '__main__':
     (r'^;;a', [';',';a']), # execute ";" with arg ";a" (Windows 2000+) or ignore
     (r'^ a', [' a']), # execute " a" (Windows 2000+) or ignore
     (r'a>>b||c', ['a', '>>', 'b', '||', 'c']),
+    (r'a "<>||&&^"', ['a "<>||&&^"']), # quoted block escape all special characters except %
+    (r'a "<>||&&%A%"', ['a "<>||&&!subst!"']),
     (r'a>>>b||c', 'NE'), # NE = raise NotExpected exception
     (r'a>>b||>>c', 'NE'),
     (r'a >> b || >> c', 'NE'),
