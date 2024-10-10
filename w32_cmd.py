@@ -4,52 +4,6 @@ COPYRIGHT = '''Copyright (C)2024, by maxpat78.'''
 
 import os
 
-""" Some annotations about a Windows Command Prompt (CMD) parser.
-
-CMD itself parses the command line before invoking commands, in an indipendent
-way from `parse_cmdline` (used internally by C apps).
-
-With the help of a simple C Windows app, we can look at the command line that 
-CMD passes to an external command:
-```
-#include <windows.h>
-#pragma comment(linker,"/DEFAULTLIB:USER32.lib")
-int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
-{
-    return MessageBox(0, lpCmdLine, "lpCmdLine=", MB_OK);
-}
-```
-The results we see, show that the parsing work CMD carries on is not trivial,
-not always clear and, perhaps, not constant in time. Some points:
-
-- `:` at line start make the parser ignore the rest;
-- ` ;,=` at line start are ignored, elsewhere are treated mostly as whitespace;
-- `|&<>`, and their doubled counterparts, are forbidden at line start;
-- `()` at line start is forbidden;
-- `^` escapes the character following;
-- pipe `|`, redirection `<, <<, >, >>` and boolean operators `&, &&, ||` split
-a line in subparts, since one or more commands have to be issued; white space
-is not needed between them;
-- longer or different sequences of pipe, redirection or boolean operators are
-forbidden;
-- `%var%` or `^%var%` are replaced with the corresponding environment variable,
-if set (while `^%var^%` and `%var^%` are both considered escaped);
-- all the other characters are simply copied and passed to the external
-commands; if the internal ones are targeted, further/different processing could
-occur; the same if special CMD environment variables are set.
-
-Some curious samples:
-- `&a [b (c ;d !e %f ^g ,h =i` are valid file system names
-- `;;a` calls "a", `^ a` calls " a", but `^;;a` calls ";"
-- given a `;d` file (the same with `,h` and `=i`):
-  * `dir;d` -> not found
-  * `dir ;d`  -> not found
-  * `dir ^;d` -> not found
-  * `dir ";d"` -> OK
-  * `dir "?d"` -> OK
-- `dir ^>b` -> lists [b file above (!?), but using our simple Windows app we
-find that `>b` was passed literally, as expected"""
-
 
 
 class NotExpected(Exception):
@@ -65,11 +19,15 @@ def cmd_parse(s):
     arg = ''
     argv = []
 
-    if not s or s[0] == ':': return []
-
     # remove (ignore) some leading chars
-    for c in ' ;,=': s = s.lstrip(c)
+    for c in ' ;,=\t': s = s.lstrip(c)
     
+    if not s or s[0] == ':': return []
+    
+    # push special batch char
+    if  s[0] == '@':
+        argv = ['@']
+        s = s[1:]
     # some combinations at line start are prohibited
     if s[0] in '|&<>':
         raise NotExpected(s[0])
@@ -126,11 +84,8 @@ def cmd_parse(s):
                 meta += 1
             arg = ''
             continue
-        if c in ' ,;=':
+        if c in ' ,;=\t':
             percent = 0
-            #~ if escaped:
-                #~ argv += [c]
-                #~ continue
         else:
             meta = 0
         arg += c
@@ -147,8 +102,9 @@ if __name__ == '__main__':
 
     cases = [
     (r'', []),
-    (r':dir', []),
-    (r'dir "a   b   c"   d   e   f', ['dir "a   b   c"   d   e   f']),
+    (r':dir', []), # ignore line (Windows 2000+) or signal error
+    (r'@a\t==b c', ['@', 'a\\t==b c']), # @ is special batch char (command)
+    (r'dir "a   b   c"   d   e   f', ['dir "a   b   c"   d   e   f']), # whitespace is preserved despite of quote
     (r'dir ^"a b^"', ['dir "a b"']), 
     (r'dir %a%', ['dir !subst!']), # dir <a replaced>
     (r'dir ^%a%', ['dir !subst!']), # dir <a replaced>
@@ -163,8 +119,8 @@ if __name__ == '__main__':
     (r'a>b', ['a', '>', 'b']),
     (r'a "b c" | b "c d" | c', ['a "b c" ', '|', ' b "c d" ', '|', ' c']),
     (r';;;a,, b, c===', ['a,, b, c===']), # ignore leading special chars
-    (r'^;;a', [';',';a']), # CMD try to execute ";"
-    (r'^ a', [' a']),
+    (r'^;;a', [';',';a']), # execute ";" with arg ";a" (Windows 2000+) or ignore
+    (r'^ a', [' a']), # execute " a" (Windows 2000+) or ignore
     (r'a>>b||c', ['a', '>>', 'b', '||', 'c']),
     (r'a>>>b||c', 'NE'), # NE = raise NotExpected exception
     (r'a>>b||>>c', 'NE'),

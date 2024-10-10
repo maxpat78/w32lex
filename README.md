@@ -52,8 +52,9 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 The results we see, show that the parsing work CMD carries on is not trivial,
 not always clear and, perhaps, not constant in time. Some points:
 
-- `:` at line start make the parser ignore the rest;
-- ` ;,=` at line start are ignored, elsewhere are treated mostly as whitespace;
+- `:` at line start makes the parser ignore the rest (Windows 2000+) or signal an error;
+- ` ;,=@` and <TAB> (one or more) at line start are ignored;
+- `@` at line start is special char in batch (line echo off);
 - `|&<>`, and their doubled counterparts, are forbidden at line start;
 - `()` at line start is forbidden;
 - `^` escapes the character following;
@@ -70,7 +71,8 @@ occur; the same if special CMD environment variables are set.
 
 Some curious samples:
 - `&a [b (c ;d !e %f ^g ,h =i` are valid file system names
-- `;;a` calls "a", `^ a` calls " a", but `^;;a` calls ";"
+- `^ a` calls " a" (Windows 2000+) or ignores the line
+- `^;;a` calls ";" passing argument ";a" (Windows 2000+) or ignores the line
 - given a `;d` file (the same with `,h` and `=i`):
   * `dir;d` -> not found
   * `dir ;d`  -> not found
