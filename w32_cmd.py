@@ -86,6 +86,11 @@ def cmd_parse(s):
             continue
         if c in ' ,;=\t':
             percent = 0
+            # exception (Windows 2000+): starting special char escaped
+            if i==2 and escaped and c in ',;=':
+                argv += [c]
+                escaped = 0
+                continue
         else:
             meta = 0
         arg += c
