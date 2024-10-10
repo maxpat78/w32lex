@@ -3,7 +3,7 @@
 COPYRIGHT = '''Copyright (C)2024, by maxpat78.'''
 
 import os
-
+from w32_lex import split
 
 
 class NotExpected(Exception):
@@ -101,6 +101,16 @@ def cmd_parse(s):
     argv += [arg]
     return argv
 
+def cmd_split(s):
+    "Post-process with w32_lex.split a command line parsed by cmd_parse (mimic mslex behavior)"
+    argv = []
+    for tok in cmd_parse(s):
+        if tok in ('@','<','|','>','<<','>>','&','&&','||'):
+            argv += [tok]
+            continue
+        argv += split(tok)
+    return argv
+
 
 
 if __name__ == '__main__':
@@ -111,7 +121,7 @@ if __name__ == '__main__':
     cases = [
     (r'', []),
     (r':dir', []), # ignore line (Windows 2000+) or signal error
-    (r'@a\t==b c', ['@', 'a\\t==b c']), # @ is special batch char (command)
+    ('@a\t==b c', ['@', 'a\t==b c']), # @ is special batch char (command)
     (r'dir "a   b   c"   d   e   f', ['dir "a   b   c"   d   e   f']), # whitespace is preserved despite of quote
     (r'dir ^"a b^"', ['dir "a b"']), 
     (r'dir %a%', ['dir !subst!']), # dir <a replaced>
@@ -143,9 +153,11 @@ if __name__ == '__main__':
         try:
             if ex[1] != cmd_parse(ex[0]):
                 print('Test case "%s" failed with %s' % (ex[0], cmd_parse(ex[0])))
+            # Comparison with mslex has no sense, since it does CommandLineToArgvW parsing all in one
             x = mslex.split(ex[0], check=0)
-            if ex[1] != x:
-                print('note: mslex splits "%s" differently: %s' % (ex[0], x))
+            y = cmd_split(ex[0])
+            if y != x:
+                print('note: mslex splits "%s" differently: %s intead of %s' % (ex[0], x, y))
             else:
                 print('note: mslex splits "%s" the same' % ex[0])
         except:

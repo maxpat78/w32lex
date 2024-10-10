@@ -32,7 +32,8 @@ such block).
 w32_cmd
 =======
 
-This experimental module tries to provide a conformant CMD parser with `cmd_parse`.
+This experimental module tries to provide a conformant CMD parser with
+`cmd_parse`, and a mslex-like one with `cmd_split`.
 
 Some annotations about a Windows Command Prompt (CMD) parser follow.
 
@@ -58,15 +59,15 @@ not always clear and not constant in time. Some points:
 - `|&<>`, and their doubled counterparts, are forbidden at line start;
 - `()` at line start is forbidden;
 - `^` escapes the character following;
-- `"` starts/ends a quoted block, escaping all special characters except `%`
-(and quote is copied; starting quote can be escaped);
+- `"` starts/ends a quoted block, escaping all special characters inside it
+except `%` (quote itself is copied; starting quote can be escaped);
 - pipe `|`, redirection `<, <<, >, >>` and boolean operators `&, &&, ||` split
 a line in subparts, since one or more commands have to be issued; white space
 is not needed around them;
 - longer or different sequences of pipe, redirection or boolean operators are
 forbidden;
 - `%var%` or `^%var%` are replaced with the corresponding environment variable,
-if set (while `^%var^%` and `%var^%` are both considered escaped);
+if set (while `^%var^%` and `%var^%` are both considered fully escaped);
 - all the other characters are simply copied and passed to the external
 commands. If the internal ones are targeted, further/different processing could
 occur; the same if special CMD environment variables are set.
@@ -85,7 +86,7 @@ Some curious samples:
 find that `>b` was passed literally, as expected
 
 Things get even more complex if we take in account old DOS COMMAND.COM:
-- a starting `@` outside batches is forbidden
+- a starting `@` outside BAT files is forbidden
 - `^` is not recognized
 - only a single `;,=` at line start is ignored
 - `:` at line start is ignored (Windows 95+) or is bad
