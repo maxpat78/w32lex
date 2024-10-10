@@ -50,7 +50,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 }
 ```
 The results we see, show that the parsing work CMD carries on is not trivial,
-not always clear and, perhaps, not constant in time. Some points:
+not always clear and not constant in time. Some points:
 
 - `:` at line start makes the parser ignore the rest (Windows 2000+) or signal an error;
 - ` ;,=@` and <TAB> (one or more) at line start are ignored;
@@ -81,3 +81,10 @@ Some curious samples:
   * `dir "?d"` -> OK
 - `dir ^>b` -> lists [b file above (!?), but using our simple Windows app we
 find that `>b` was passed literally, as expected
+
+Things get even more complex if we take in account old DOS COMMAND.COM:
+- a starting `@` outside batches is forbidden
+- `^` is not recognized
+- only a single `;,=` at line start is ignored
+- `:` at line start is ignored (Windows 95+)
+- `&, &&, ||` operators and parentheses `()` are not recognized
