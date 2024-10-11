@@ -58,9 +58,9 @@ not always clear and not constant in time. Some points:
 - a starting `@` is a special character in BAT scripts (=line echo off);
 - `|&<>`, and their doubled counterparts, are forbidden at line start;
 - `()` at line start is forbidden;
-- `^` escapes the character following;
-- `"` starts/ends a quoted block, escaping all special characters inside it
-except `%` (quote itself is copied; starting quote can be escaped);
+- `^` escapes the character following; alone at line start, it should be forbidden (it asks for a second character to escape).
+- `"` starts a quoted block, escaping all special characters inside it
+except `%` until another quote, or LF/EOS, is found. Quote belongs to the block and the starting quote only can be escaped by `^`.
 - pipe `|`, redirection `<, <<, >, >>` and boolean operators `&, &&, ||` split
 a line in subparts, since one or more commands have to be issued; white space
 is not needed around them;

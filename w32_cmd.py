@@ -21,7 +21,7 @@ def cmd_parse(s):
     argv = []
 
     # remove (ignore) some leading chars
-    for c in ' ;,=\t': s = s.lstrip(c)
+    for c in ' ;,=\t': s = s.lstrip(c) # add 0xB (VTAB), 0xC (form feed), 0xFF?
     
     if not s or s[0] == ':': return []
     
@@ -141,12 +141,16 @@ if __name__ == '__main__':
     (r'^ a', [' a']), # execute " a" (Windows 2000+) or ignore
     (r'a>>b||c', ['a', '>>', 'b', '||', 'c']),
     (r'a "<>||&&^"', ['a "<>||&&^"']), # quoted block escape all special characters except %
+    (r'a "<>||&&^', ['a "<>||&&^']), # if not closed, escape to EOS
     (r'a "<>||&&%A%"', ['a "<>||&&!subst!"']),
     (r'a>>>b||c', 'NE'), # NE = raise NotExpected exception
     (r'a>>b||>>c', 'NE'),
     (r'a >> b || >> c', 'NE'),
     (r'a >| b', 'NE'),
+    (r"&", 'NE'),
     (r'&whoami', 'NE'),
+    (r"^", ['']), # prompt asks for another char to escape
+    (r"!", ["!"]),
     ]
 
     for ex in cases:
@@ -157,8 +161,6 @@ if __name__ == '__main__':
             y = cmd_split(ex[0])
             if y != x:
                 print('note: mslex splits "%s" differently: %s instead of %s' % (ex[0], x, y))
-            #~ else:
-                #~ print('note: mslex splits "%s" the same' % ex[0])
         except:
             if ex[1] == 'NE':
                 print('Test case "%s" raised NotExpected as...expected!'%ex[0])
