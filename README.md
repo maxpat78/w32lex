@@ -20,14 +20,14 @@ At a glance, a compatible modern Win32 parser follows such rules when splitting 
 - backslashes, only if followed by `"`:
   * `2n -> n`, and opens/closes a block
   * `(2n+1) -> n`, and adds a literal `"`
-- all other characters are simply copied
+- all other characters are simply copied.
 
 `split` accepts an optional argument `mode` to set the compatibility level:
-with mode=0 (default), it behaves like mslex parser; if mode&1, first argument
-is parsed in a simplified way (i.e. argument is everything up to the first space if
-unquoted, or the second quote otherwise); if mode&2, emulate parse_cmdline from
-2005 onward (a `""` inside a quoted block emit a literal quote _without_ ending
-such block).
+- with mode=0 (default), it behaves like mslex parser;
+- with mode&1, first argument is parsed in a simplified way (i.e. argument is
+everything up to the first space if unquoted, or the second quote otherwise);
+- with mode&2, it emulates parse_cmdline from 2005 onward (a `""` inside a
+quoted block emit a literal quote _without_ ending such block).
 
 w32_cmd
 =======
@@ -54,13 +54,15 @@ The results we see, show that the parsing work CMD carries on is not trivial,
 not always clear and not constant in time. Some points:
 
 - `:` at line start makes the parser ignore the rest (Windows 2000+) or signal an error;
-- ` ;,=@` and <TAB> (one or more) at line start are ignored but
+- ` ;,=@` and _TAB_ (one or more) at line start are ignored but
 - a starting `@` is a special character in BAT scripts (=line echo off);
 - `|&<>`, and their doubled counterparts, are forbidden at line start;
 - `()` at line start is forbidden;
-- `^` escapes the character following; alone at line start, it should be forbidden (it asks for a second character to escape).
-- `"` starts a quoted block, escaping all special characters inside it
-except `%` until another quote, or LF/EOS, is found. Quote belongs to the block and the starting quote only can be escaped by `^`.
+- `^` escapes the character following; alone at line start, it should be
+forbidden (it asks for a second character to escape).
+- `"` starts a quoted block, escaping all special characters inside it except
+`%` , until another quote, or LF/EOS, is found. Quote belongs to the block
+and only the starting quote can be escaped by `^`.
 - pipe `|`, redirection `<, <<, >, >>` and boolean operators `&, &&, ||` split
 a line in subparts, since one or more commands have to be issued; white space
 is not needed around them;
