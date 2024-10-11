@@ -50,6 +50,15 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     return MessageBox(0, lpCmdLine, "lpCmdLine=", MB_OK);
 }
 ```
+or, from the CMD line:
+```
+#include <windows.h>
+#pragma comment(linker,"/DEFAULTLIB:USER32.lib")
+void main() {
+   puts(GetCommandLine());
+}
+```
+
 The results we see, show that the parsing work CMD carries on is not trivial,
 not always clear and not constant in time. Some points:
 
