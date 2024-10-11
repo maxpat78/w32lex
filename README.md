@@ -102,9 +102,7 @@ bits 16
 
 ; DS:0000   PSP seg preloaded by DOS
 ; DS:0080   command-line length (following)
-xor bx, bx
-mov bl, [80h]
-test bl, bl
+cmp byte [80h], 0
 jnz GO
 int 20h ; terminate COM
 GO:
