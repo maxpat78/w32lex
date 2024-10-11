@@ -91,3 +91,30 @@ Things get even more complex if we take in account old DOS COMMAND.COM:
 - only a single `;,=` at line start is ignored
 - `:` at line start is ignored (Windows 95+) or is bad
 - `&, &&, ||` operators and parentheses `()` are not recognized
+
+A sample assembly program to play with old DOS command line:
+```
+; compile with NASM PRL.ASM -o PRL.COM
+org 100h
+bits 16
+
+; DS:0000   PSP seg preloaded by DOS
+; DS:0080   command-line length (following)
+xor bx, bx
+mov bl, [80h]
+test bl, bl
+jnz GO
+int 20h ; terminate COM
+GO:
+mov di, 80h
+PRINT:
+inc di
+mov dl, [ds:di]
+cmp dl, 0Dh
+jz END
+mov ah, 2 ; write char in DL to STDOUT
+int 21h
+jmp PRINT
+END:
+int 20h
+```

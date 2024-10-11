@@ -153,13 +153,12 @@ if __name__ == '__main__':
         try:
             if ex[1] != cmd_parse(ex[0]):
                 print('Test case "%s" failed with %s' % (ex[0], cmd_parse(ex[0])))
-            # Comparison with mslex has no sense, since it does CommandLineToArgvW parsing all in one
             x = mslex.split(ex[0], check=0)
             y = cmd_split(ex[0])
             if y != x:
-                print('note: mslex splits "%s" differently: %s intead of %s' % (ex[0], x, y))
-            else:
-                print('note: mslex splits "%s" the same' % ex[0])
+                print('note: mslex splits "%s" differently: %s instead of %s' % (ex[0], x, y))
+            #~ else:
+                #~ print('note: mslex splits "%s" the same' % ex[0])
         except:
             if ex[1] == 'NE':
                 print('Test case "%s" raised NotExpected as...expected!'%ex[0])
