@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "w32lex"
+dynamic=["version"]
+description = "Equivalent shlex module for the Win32 world"
+readme = "README.md"
+requires-python = ">=3.0"
+license = {file = "LICENSE"}
+keywords = ["argument-parser", "split", "python", "python3", "win32", "splitter", "shlex", "lexer-parser", "argument-parsing"]
+authors = [
+  {name = "maxpat78", email = "maxpat78@yahoo.it" }
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3 :: Only",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/maxpat78/w32lex"
+"Source" = "https://github.com/maxpat78/w32lex"
+
+[tool.setuptools]
+packages = ["w32lex"]
+
+[tool.setuptools.dynamic]
+version = {attr = "w32lex.__version__"}

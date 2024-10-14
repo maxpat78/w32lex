@@ -1,4 +1,4 @@
-from w32_lex import *
+from w32lex import *
 
 # Requires mslex and Windows to compare results
 
@@ -20,9 +20,9 @@ def ctypes_split(s):
     LocalFree(argv)
     return result
 
-stdargv = CDLL('.\\STDARGV98.dll')
-stdargv = CDLL('.\\STDARGV2008.dll')
-#~ stdargv = CDLL('.\\STDARGV2015.dll')
+stdargv = CDLL('.\\stdargv\\STDARGV98.dll')
+#~ stdargv = CDLL('.\\stdargv\\STDARGV2005.dll') # rules change
+#~ stdargv = CDLL('.\\stdargv\\argv_parsing.dll')
 
 def parse_cmdline(s):
     numargs = c_int(0)
@@ -285,6 +285,8 @@ examples = [
     (' \t  \\"a     "\\"b   \\"c" \t ', ['"a', '"b   "c']),
     (r'\"a     "\"b   \"c" \\\\\\', ['"a', '"b   "c', '\\\\\\\\\\\\']),
     (r'\"a     "\"b   \"c" \\\\\\"', ['"a', '"b   "c', '\\\\\\']),
+    (r'\"a     "\"b   \"c" \\\\\\"', ['"a', '"b   "c', '\\\\\\']),
+    (r'a "<>||&&^', [])
 ]
 
 n=0

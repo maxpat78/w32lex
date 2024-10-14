@@ -1,5 +1,5 @@
-w32_lex
-=======
+w32lex
+======
 
 This package contains a pure Python 3 implementation of `split`, `join` and
 `quote` functions similar to those found in the builtin `shlex.py` module, but
@@ -23,22 +23,24 @@ At a glance, a compatible modern Win32 parser follows such rules when splitting 
 - all other characters are simply copied.
 
 `split` accepts an optional argument `mode` to set the compatibility level:
-- with mode=0 (default), it behaves like mslex parser;
-- with mode&1, first argument is parsed in a simplified way (i.e. argument is
+- with mode=SPLIT_SHELL32 (default), it behaves like mslex parser;
+- with mode=SPLIT_ARGV0, first argument is parsed in a simplified way (i.e. argument is
 everything up to the first space if unquoted, or the second quote otherwise);
-- with mode&2, it emulates parse_cmdline from 2005 onward (a `""` inside a
+- with mode=SPLIT_VC2005, it emulates parse_cmdline from 2005 onward (a `""` inside a
 quoted block emit a literal quote _without_ ending such block).
 
-w32_cmd
-=======
+To parse the line like CMD does, separate functions `cmd_split` and
+`cmd_parse` are provided, with a corresponding `cmd_quote`.
 
-This experimental module tries to provide a conformant CMD parser with
-`cmd_parse`, and a mslex-like one with `cmd_split`.
+`cmd_split` and `cmd_parse` accept a mode argument where a fourth value can
+be specified: CMD_VAREXPAND to make the parser expand environment `%variables%`
+in place.
+
 
 Some annotations about a Windows Command Prompt (CMD) parser follow.
 
 CMD itself parses the command line _before_ invoking commands, in an indipendent
-way from `parse_cmdline` (used internally by C apps).
+way from `parse_cmdline` (used internally by C apps) or CommandLineToArgvW.
 
 With the help of a simple C Windows app, we can look at the command line that 
 CMD passes to an external command:
@@ -50,7 +52,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
     return MessageBox(0, lpCmdLine, "lpCmdLine=", MB_OK);
 }
 ```
-or, from the CMD line:
+or, from the CMD line itself:
 ```
 #include <windows.h>
 #pragma comment(linker,"/DEFAULTLIB:USER32.lib")

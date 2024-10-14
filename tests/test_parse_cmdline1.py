@@ -1,9 +1,8 @@
-from w32_lex import *
-
 # Requires Windows and special STDARGVxxx.DLL to compare results
-
+from w32lex import *
 from ctypes import *
 from ctypes import windll, wintypes
+import sys
 
 CommandLineToArgvW = windll.shell32.CommandLineToArgvW
 CommandLineToArgvW.argtypes = [wintypes.LPCWSTR, POINTER(c_int)]
@@ -14,7 +13,6 @@ LocalFree.argtypes = [wintypes.HLOCAL]
 LocalFree.restype = wintypes.HLOCAL
 
 # does NOT add dummy foo.exe here, but split full command line
-
 def ctypes_split(s):
     argc = c_int()
     argv = CommandLineToArgvW(s, byref(argc))
@@ -22,11 +20,16 @@ def ctypes_split(s):
     LocalFree(argv)
     return result
 
-stdargv = CDLL('.\\STDARGV98.dll') # built from slightly modified CRT sources
-#~ stdargv = CDLL('.\\STDARGV2008.dll')
-#~ stdargv = CDLL('.\\STDARGV2015.dll')
+try:
+    stdargv98 = CDLL('.\\stdargv\\STDARGV98.dll')
+    stdargv05 = CDLL('.\\stdargv\\STDARGV2005.dll')
+except FileNotFoundError:
+    print('STDARGVxxxx.DLL not found, cannot test against C Runtime parse_cmdline!')
+    sys.exit(1)
 
-def parse_cmdline(s):
+def parse_cmdline(s, new=0):
+    stdargv = stdargv98
+    if new: stdargv = stdargv05
     numargs = c_int(0)
     numchars = c_int(0)
     cmdline = create_string_buffer(s.encode())
@@ -44,14 +47,14 @@ def parse_cmdline(s):
     return r
 
 examples = [
-    (r'\"a     "\"b   \"c" \\\\\\"', ['\\a     \\b   \\c \\\\\\\\\\\\']),
+    (r'\"a     "\"b   \"c" \\\\\\"', ['\\a     \\b   \\c \\\\\\\\\\\\']), # differ with mode=3
     (r'a.exe a "b c" d', []),
     (r'"a.exe" a "b c" d', []),
     (r'"a.exe" a "b c" d', []),
     (r'"c:\a\b\c\a.exe" a "b c" d', []),
     (r'"c:\a\b c\a.exe" a "b c" d', []),
-    (r'\"c:\a\b c\a.exe\" a "b c" d', ['\\c:\\a\\b c\\a.exe\\', 'a', 'b c', 'd']),
-    (r'"c:\a\b c\a.exe a "b c" d', ['c:\\a\\b c\\a.exe a b', 'c d']),
+    (r'\"c:\a\b c\a.exe\" a "b c" d', ['\\c:\\a\\b c\\a.exe\\', 'a', 'b c', 'd']),  # differ with mode=3
+    (r'"c:\a\b c\a.exe a "b c" d', ['c:\\a\\b c\\a.exe a b', 'c d']), # differ with mode=3
 ]
 
 n=0

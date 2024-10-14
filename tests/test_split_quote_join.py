@@ -1,8 +1,6 @@
-from w32_lex import *
-
 # Requires mslex and Windows to compare results
+from w32lex import *
 import mslex
-
 from ctypes import *
 from ctypes import windll, wintypes
 
@@ -21,25 +19,7 @@ def ctypes_split(s):
     LocalFree(argv)
     return result
 
-#~ stdargv = CDLL('.\\STDARGV98.dll')
-stdargv = CDLL('.\\STDARGV2015.dll')
 
-def parse_cmdline(s):
-    numargs = c_int(0)
-    numchars = c_int(0)
-    cmdline = create_string_buffer(b"foo.exe " + s.encode())
-    # void parse_cmdline(char *cmdstart, char **argv, char *args, int *numargs, int *numchars);
-    stdargv.parse_cmdline(cmdline, c_void_p(0), c_char_p(0), byref(numargs), byref(numchars))
-
-    argv = (c_char_p * numargs.value)()
-    args = create_string_buffer(numchars.value)
-    stdargv.parse_cmdline(cmdline, argv, args, byref(numargs), byref(numchars))
-
-    # build a result list similar to ctypes_split
-    r = []
-    for i in range(1, numargs.value-1): # omit first command name (fake) and last NULL (None)
-        r += [argv[i].decode()] # returns str, not bytes
-    return r
 
 # from https://github.com/smoofra/mslex
 examples = [
@@ -285,18 +265,20 @@ examples = [
     (' \t  \\"a     "\\"b   \\"c" \t ', ['"a', '"b   "c']),
     (r'\"a     "\"b   \"c" \\\\\\', ['"a', '"b   "c', '\\\\\\\\\\\\']),
     (r'\"a     "\"b   \"c" \\\\\\"', ['"a', '"b   "c', '\\\\\\']),
+    (r'\"a     "\"[!b()]   \"c" []\\\\\\"', ['"a', '"[!b()]   "c', '[]\\\\\\']),
+    (r'^|!(["\"])', ['^|!([])']),
+    (r'a "<>||&&^', ['po']),
 ]
+
 
 n=0
 m = 0
 for ex in examples:
-    a, b, c, k = split(ex[0]), mslex.split(ex[0],0), ctypes_split(ex[0]), parse_cmdline(ex[0])
+    a, b, c = split(ex[0]), mslex.split(ex[0],0), ctypes_split(ex[0])
     assert b==c
     if a != b:
         print ('%s differ from mslex: case=<%s> --> res=<%s>' %(a,ex[0],ex[1]))
         n += 1
-    #~ if a != k:
-        #~ print ('note: split(mode=2) %s differ from parse_cmdline %s: case=<%s> --> res=<%s>' %(a, k,ex[0],ex[1]))
     d = split(join(a))
     if d != a:
         print('quote failed on <%s>: quoted=<%s>, splitted=<%s>, orig=<%s>' % (a,join(a),d,ex[0]))
@@ -307,3 +289,5 @@ if m:
     print('%d/%d tests failed (quote)' % (m,len(examples)))
 if not m and not n:
     print('All %d tests passed!'%len(examples))
+
+assert split(r'"quoted ""block"" continues"', 0) == ctypes_split(r'"quoted ""block"" continues"')
