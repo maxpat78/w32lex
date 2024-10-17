@@ -1,7 +1,6 @@
 COPYRIGHT = '''Copyright (C)2024, by maxpat78.'''
 
-__all__ = ["split", "quote", "join", "cmd_parse", "cmd_split", "cmd_quote"]
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 import os
 

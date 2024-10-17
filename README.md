@@ -6,9 +6,9 @@ This package contains a pure Python 3 implementation of `split`, `join` and
 suitable for the Windows world.
 
 It was tested against optimum [mslex](https://github.com/smoofra/mslex) project and it
-gives the same results (but with no regexes used), except that only the
-equivalent CommandLineToArgvW (and parse_cmdline from VC run-time) parser is
-implemented, not the CMD.EXE (Windows command prompt) one.
+gives mostly the same results (but with no regexes used), with a difference: CommandLineToArgvW
+(and parse_cmdline from VC run-time) parser and CMD parser/tokenizer are implemented in
+distintct functions.
 
 At a glance, a compatible modern Win32 parser follows such rules when splitting a command line:
 - leading and trailing spaces are stripped from command line
@@ -23,24 +23,25 @@ At a glance, a compatible modern Win32 parser follows such rules when splitting 
 - all other characters are simply copied.
 
 `split` accepts an optional argument `mode` to set the compatibility level:
-- with mode=SPLIT_SHELL32 (default), it behaves like mslex parser;
+- with mode=SPLIT_SHELL32 (default), it behaves like standard Windows parser (SHELL32);
 - with mode=SPLIT_ARGV0, first argument is parsed in a simplified way (i.e. argument is
 everything up to the first space if unquoted, or the second quote otherwise);
-- with mode=SPLIT_VC2005, it emulates parse_cmdline from 2005 onward (a `""` inside a
+- with mode=SPLIT_VC2005, it emulates parse_cmdline from 2005 onwards (a `""` inside a
 quoted block emit a literal quote _without_ ending such block).
 
 To parse the line like CMD does, separate functions `cmd_split` and
 `cmd_parse` are provided, with a corresponding `cmd_quote`.
 
-`cmd_split` and `cmd_parse` accept a mode argument where a fourth value can
-be specified: CMD_VAREXPAND to make the parser expand environment `%variables%`
-in place.
-
+`cmd_split` and `cmd_parse` accept a mode argument where further values can be
+specified:
+- CMD_VAREXPAND to make the parser expand environment `%variables%` in place;
+- CMD_EXCLMARK to expand also delayed expansion `!variables!`.
 
 Some annotations about a Windows Command Prompt (CMD) parser follow.
 
 CMD itself parses the command line _before_ invoking commands, in an indipendent
-way from `parse_cmdline` (used internally by C apps) or CommandLineToArgvW.
+way from `parse_cmdline` (used internally by C apps built by Visual C++
+compilers) or CommandLineToArgvW.
 
 With the help of a simple C Windows app, we can look at the command line that 
 CMD passes to an external command:
@@ -64,8 +65,10 @@ void main() {
 The results we see, show that the parsing work CMD carries on is not trivial,
 not always clear and not constant in time. Some points:
 
-- `:` at line start makes the parser ignore the rest (Windows 2000+) or signal an error;
-- ` ;,=@` and _TAB_ (one or more) at line start are ignored but
+- `:` at line start makes the parser ignore the rest (Windows 2000+) or signal
+an error;
+- one or more ` ;,=@`,  _TAB_, vertical TAB, form-feed and 0xFF characters at
+line start are ignored but
 - a starting `@` is a special character in BAT scripts (=line echo off);
 - `|&<>`, and their doubled counterparts, are forbidden at line start;
 - `()` at line start is forbidden;
