@@ -1,6 +1,6 @@
 COPYRIGHT = '''Copyright (C)2024, by maxpat78.'''
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 import os
 
@@ -133,10 +133,16 @@ def quote(s):
             arg += backslashes*'\\'
             backslashes = 0
         arg += c
+    # any backslash left?
     if backslashes:
-        # double at end, since we quote hereafter
-        arg += (2*backslashes)*'\\'
-    arg = '"'+arg+'"' # always quote argument
+        arg += backslashes*'\\'
+    # quote only when needed
+    for c in ' \t': # others?
+        if c in arg:
+            if backslashes:
+                arg += backslashes*'\\' # double backslashes at quoted EOS
+            arg = '"'+arg+'"'
+            break
     return arg
 
 def join(argv):
@@ -152,6 +158,9 @@ def cmd_parse(s, mode=SPLIT_SHELL32|CMD_VAREXPAND):
     meta = 0 # special chars in a row
     arg = ''
     argv = []
+
+    # is it right? handle ^CRLF?
+    s = s.strip('\r\n')
 
     # remove (ignore) some leading chars
     for c in ' ;,=\t\x0B\x0C\xFF': s = s.lstrip(c)
@@ -175,6 +184,7 @@ def cmd_parse(s, mode=SPLIT_SHELL32|CMD_VAREXPAND):
         if c == '"':
             if not escaped: quoted = not quoted
         if c == '^':
+            # ^CRLF (middle and at end) is well handled?
             if escaped or quoted:
                 arg += c
                 escaped = 0
@@ -212,6 +222,7 @@ def cmd_parse(s, mode=SPLIT_SHELL32|CMD_VAREXPAND):
             continue
         # pipe, redirection, &, && and ||: break argument, and set aside special char/couple
         # multiple pipe, redirection, &, && and || in sequence are forbidden
+        # TODO: recognize >&n handle redirection n>&m
         if c in '|<>&':
             if escaped or quoted:
                 arg += c
@@ -258,7 +269,7 @@ def cmd_split(s, mode=SPLIT_SHELL32):
 
 def cmd_quote(s):
     "Quote a string in a way suitable for the cmd_split function"
-    # suitable means [x] == cmd_split(cmd_quote(x))
+    # suitable means [x] equals (or is equivalent to) cmd_split(cmd_quote(x))
     arg = ''
     for c in s:
         if c in ('^%!<|>&'): arg += '^' # escape the escapable!
@@ -266,5 +277,6 @@ def cmd_quote(s):
     if (' ' in arg) or ('\\' in arg):
          # quote only when special split chars inside,
          # since quote() always insert into double quotes!
+         # CAVE: no more true! 19.10.24
         arg = quote(arg)
     return arg

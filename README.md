@@ -5,7 +5,7 @@ This package contains a pure Python 3 implementation of `split`, `join` and
 `quote` functions similar to those found in the builtin `shlex.py` module, but
 suitable for the Windows world.
 
-It was tested against optimum [mslex](https://github.com/smoofra/mslex) project and it
+It was tested against optimum [mslex](https://github.com/smoofra/mslex) project (v.1.2.0) and it
 gives mostly the same results (but with no regexes used), with a difference: CommandLineToArgvW
 (and parse_cmdline from VC run-time) parser and CMD parser/tokenizer are implemented in
 distintct functions.
