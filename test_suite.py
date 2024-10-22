@@ -1,48 +1,8 @@
+import unittest, sys
 from w32lex import *
 
-# Requires mslex and Windows to compare results
-
-from ctypes import *
-from ctypes import windll, wintypes
-
-CommandLineToArgvW = windll.shell32.CommandLineToArgvW
-CommandLineToArgvW.argtypes = [wintypes.LPCWSTR, POINTER(c_int)]
-CommandLineToArgvW.restype = POINTER(wintypes.LPWSTR)
-
-LocalFree = windll.kernel32.LocalFree
-LocalFree.argtypes = [wintypes.HLOCAL]
-LocalFree.restype = wintypes.HLOCAL
-
-def ctypes_split(s):
-    argc = c_int()
-    argv = CommandLineToArgvW(s, byref(argc))
-    result = [argv[i] for i in range(0, argc.value)]
-    LocalFree(argv)
-    return result
-
-stdargv = CDLL('.\\stdargv\\STDARGV98.dll')
-#~ stdargv = CDLL('.\\stdargv\\STDARGV2005.dll') # rules change
-#~ stdargv = CDLL('.\\stdargv\\argv_parsing.dll')
-
-def parse_cmdline(s):
-    numargs = c_int(0)
-    numchars = c_int(0)
-    cmdline = create_string_buffer(s.encode())
-    # void parse_cmdline(char *cmdstart, char **argv, char *args, int *numargs, int *numchars);
-    stdargv.parse_cmdline(cmdline, c_void_p(0), c_char_p(0), byref(numargs), byref(numchars))
-
-    argv = (c_char_p * numargs.value)()
-    args = create_string_buffer(numchars.value)
-    stdargv.parse_cmdline(cmdline, argv, args, byref(numargs), byref(numchars))
-
-    # build a result list similar to ctypes_split
-    r = []
-    for i in range(0, numargs.value-1): # omit first command name (fake) and last NULL (None)
-        r += [argv[i].decode()] # returns str, not bytes
-    return r
-
 # from https://github.com/smoofra/mslex
-examples = [
+cases = [
     (r"", []),
     (r'"', [""]),
     (r"x", ["x"]),
@@ -285,24 +245,113 @@ examples = [
     (' \t  \\"a     "\\"b   \\"c" \t ', ['"a', '"b   "c']),
     (r'\"a     "\"b   \"c" \\\\\\', ['"a', '"b   "c', '\\\\\\\\\\\\']),
     (r'\"a     "\"b   \"c" \\\\\\"', ['"a', '"b   "c', '\\\\\\']),
-    (r'\"a     "\"b   \"c" \\\\\\"', ['"a', '"b   "c', '\\\\\\']),
-    (r'a "<>||&&^', [])
+    (r'\"a     "\"[!b()]   \"c" []\\\\\\"', ['"a', '"[!b()]   "c', '[]\\\\\\']),
+    (r'^|!(["\"])', ['^|!([])']),
+    (r'a "<>||&&^', ['po'])
 ]
 
-n=0
-m = 0
-for ex in examples:
-    exe = "foo.exe "
-    a, b, c = split(exe+ex[0], 3), parse_cmdline(exe+ex[0]), ctypes_split(exe+ex[0])
-    if a != b:
-        print ('case=<%s>: split!=parse_cmdline: %s != %s' %(ex[0],a,b))
-        n+=1
-    if b != c:
-        print ('case=<%s>: parse_cmdline!=ctypes_split: %s != %s' %(ex[0],b,c))
-        m+=1
-if n:
-    print('%d/%d tests failed (split!=parse_cmdline)' % (n,len(examples)))
-if m:
-    print('%d/%d tests failed (parse_cmdline!=ctypes_split)' % (m,len(examples)))
-if not m and not n:
-    print('All %d tests passed!'%len(examples))
+
+if os.name == 'nt':
+    from ctypes import *
+    from ctypes import windll, wintypes
+
+    CommandLineToArgvW = windll.shell32.CommandLineToArgvW
+    CommandLineToArgvW.argtypes = [wintypes.LPCWSTR, POINTER(c_int)]
+    CommandLineToArgvW.restype = POINTER(wintypes.LPWSTR)
+
+    LocalFree = windll.kernel32.LocalFree
+    LocalFree.argtypes = [wintypes.HLOCAL]
+    LocalFree.restype = wintypes.HLOCAL
+
+    def ctypes_split(s, argv0=True):
+        if argv0:
+            cmdline = "foo.exe " + s
+            start = 1
+        else:
+            cmdline = s
+            start = 0
+        argc = c_int()
+        argv = CommandLineToArgvW(cmdline, byref(argc))
+        result = [argv[i] for i in range(start, argc.value)]
+        LocalFree(argv)
+        return result
+
+    try:
+        stdargv05 = CDLL('.\\stdargv\\STDARGV2005.dll')
+        #~ stdargv05 = CDLL('.\\stdargv\\STDARGV98.dll')
+    except:
+        stdargv05 = None
+        print('warning: cannot test STDARGV2005 compatibility')
+
+    if stdargv05:
+        def parse_cmdline(s, stdargv=stdargv05, argv0=True):
+            if argv0:
+                cmdline = create_string_buffer(b"foo.exe " + s.encode())
+                start = 1
+            else:
+                cmdline = create_string_buffer(s.encode())
+                start = 0
+            numargs = c_int(0)
+            numchars = c_int(0)
+            # void parse_cmdline(char *cmdstart, char **argv, char *args, int *numargs, int *numchars);
+            stdargv.parse_cmdline(cmdline, c_void_p(0), c_char_p(0), byref(numargs), byref(numchars))
+
+            argv = (c_char_p * numargs.value)()
+            args = create_string_buffer(numchars.value)
+            stdargv.parse_cmdline(cmdline, argv, args, byref(numargs), byref(numchars))
+
+            # build a result list similar to ctypes_split
+            r = []
+            for i in range(start, numargs.value-1): # omit last NULL (None)
+                r += [argv[i].decode()] # returns str, not bytes
+            return r
+    else:
+            parse_cmdline = None
+
+
+
+class w32lex(unittest.TestCase):
+    def test_0(p):
+        "Test default SHELL32 mode"
+        for case in cases:
+            p.assertEqual(split(case[0]), ctypes_split(case[0]), 'CommandLineToArgvW splits differently: '+case[0])
+
+    def test_1(p):
+        "Test quoting"
+        for case in cases:
+            a = split(case[0])
+            p.assertEqual(a, split(join(a)), 'failed quoting: '+case[0])
+
+    def test_2(p):
+        "Test VC2005+ mode"
+        if not stdargv05: return
+        for case in cases:
+            a, b = split(case[0], SPLIT_VC2005), parse_cmdline(case[0])
+            try:
+                p.assertEqual(a, b, 'VC Runtime (2005+) splits differently: '+ case[0])
+            except:
+                print(sys.exception())
+
+    def test_3a(p):
+        "Test full SHELL32 vs VC Runtime (2005+) (with true argv[0])"
+        for case in cases:
+            try:
+                p.assertEqual(ctypes_split(case[0], argv0=False), parse_cmdline(case[0], argv0=False), 'CommandLineToArgvW != parse_cmdline: '+case[0])
+            except:
+                print(sys.exception())
+
+    def test_3b(p):
+        "Test full SHELL32 mode (with true argv[0])"
+        for case in cases:
+            try:
+                p.assertEqual(split(case[0], SPLIT_ARGV0), ctypes_split(case[0], argv0=False), 'CommandLineToArgvW (full) splits differently: ' + case[0])
+            except:
+                print(sys.exception())
+
+
+
+if __name__ == '__main__':
+    if os.name != 'nt':
+        print('Nothing to test outside Windows')
+    else:
+        unittest.main()

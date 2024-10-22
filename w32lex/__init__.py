@@ -1,6 +1,6 @@
 COPYRIGHT = '''Copyright (C)2024, by maxpat78.'''
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 import os
 
@@ -30,20 +30,22 @@ def split(s, mode=SPLIT_SHELL32):
 
     if not s: return []
 
-    # Parse 1st argument (executable pathname) in a simplified way, parse_cmdline conformant.
-    # Argument is everything up to first space if unquoted, or second quote otherwise
+    # CommandLineToArgvW parses first argument (executable pathname) in a simplified way
+    # It collects everything up to first space if unquoted, or second quote otherwise
     if mode&1:
         i=0
         for c in s:
             i += 1
             if c == '"':
-                quoted = not quoted
-                continue
+                if quoted: break # 2nd " ends arg
+                if i == 1: # 1st char only: start quoting
+                    quoted = not quoted
+                    continue
             if c in ' \t':
-                if quoted:
+                if quoted: # include white space if quoted
                     arg += c
                     continue
-                break
+                break # else ends arg
             arg += c
         argv += [arg]
         arg=''
@@ -222,7 +224,7 @@ def cmd_parse(s, mode=SPLIT_SHELL32|CMD_VAREXPAND):
             continue
         # pipe, redirection, &, && and ||: break argument, and set aside special char/couple
         # multiple pipe, redirection, &, && and || in sequence are forbidden
-        # TODO: recognize >&n handle redirection n>&m
+        # TODO: recognize handle redirection "n>" and "n>&m"
         if c in '|<>&':
             if escaped or quoted:
                 arg += c
