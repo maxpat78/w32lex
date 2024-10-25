@@ -1,6 +1,6 @@
 COPYRIGHT = '''Copyright (C)2024, by maxpat78.'''
 
-__version__ = '1.0.5'
+__version__ = '1.0.6'
 
 import os
 
@@ -163,8 +163,7 @@ def cmd_parse(s, mode=SPLIT_SHELL32|CMD_VAREXPAND):
     quoted = 0
     percent = 0
     exclamation = 0
-    leftP = [] # opened-closed parenthesis (position)
-    rightP = []
+    parenthesis = [] # opened parenthesis (argv position)
     arg = ''
     argv = []
 
@@ -200,13 +199,22 @@ def cmd_parse(s, mode=SPLIT_SHELL32|CMD_VAREXPAND):
             else:
                 escaped = 1
             continue
-        if c in '()' and not (escaped or quoted):
+        if c == '(' and not (escaped or quoted):
             if arg:
                 argv += [arg]
                 arg = ''
             argv += [c]
-            o = (leftP,rightP)[c==')']
-            o += [len(argv)-1]
+            parenthesis += [len(argv)-1]
+            continue
+        if c == ')' and not (escaped or quoted):
+            if arg:
+                argv += [arg]
+                arg = ''
+            if not parenthesis:
+                raise NotExpected(')')
+            last_opened = parenthesis.pop()
+            # replaces parenthesized trait with a single argument
+            argv[last_opened:] = [''.join(argv[last_opened:])+')']
             continue
         # %VAR%   -> replace with os.environ['VAR'] *if set* and even if quoted
         # ^%VAR%  -> same as above
@@ -281,19 +289,9 @@ def cmd_parse(s, mode=SPLIT_SHELL32|CMD_VAREXPAND):
         arg += c
         escaped = 0
     if arg: argv += [arg]
-    # if parenthesis are not balanced
-    if len(rightP) != len(leftP):
-        raise NotExpected(('(',')')[len(rightP)>len(leftP)])
-    if leftP:
-        # replace from innermost couple
-        leftP = list(reversed(leftP))
-        rightP = list(reversed(rightP))
-        l = len(leftP)-1
-        for i in range(l+1):
-            j = leftP[i]
-            k = rightP[l-i]
-            # replace list items with their concatenation
-            argv[j:k+1] = [''.join(argv[j:k+1])]
+    # if any unclosed parenthesis
+    if parenthesis:
+        raise NotExpected('(')
     return argv
 
 def cmd_split(s, mode=SPLIT_SHELL32):
