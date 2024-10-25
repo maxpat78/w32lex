@@ -73,7 +73,7 @@ line start are ignored but
 - carriage-return character is ignored;
 - `|&<>`, and their doubled counterparts (except `<<` which is invalid), are
 forbidden at line start;
-- `()` at line start is forbidden;
+- empty `()` is forbidden;
 - `(command)` with one ore more _balanced_ parenthesis is a valid form;
 - `^` escapes the character following; alone at line start, it should be
 forbidden (it asks for a second character to escape).

@@ -18,6 +18,14 @@ print(cmd_parse('a||b & c'))
 print(cmd_parse('a>b&c'))
 print(cmd_parse('a b>c&d||e'))
 
+try:
+    print(cmd_parse('()'))
+except NotExpected:
+    print("cmd_parse('()')")
+try:
+    print(cmd_parse('(a) ()'))
+except NotExpected:
+    print("cmd_parse('(a) ()')")
 print(cmd_parse('(a b)'))
 print(cmd_parse('"(a b)"'))
 try:

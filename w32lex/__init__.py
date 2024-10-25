@@ -1,6 +1,6 @@
 COPYRIGHT = '''Copyright (C)2024, by maxpat78.'''
 
-__version__ = '1.0.6'
+__version__ = '1.0.7'
 
 import os
 
@@ -182,8 +182,6 @@ def cmd_parse(s, mode=SPLIT_SHELL32|CMD_VAREXPAND):
     # some combinations at line start are prohibited
     if s[0] in '|&<>':
         raise NotExpected(s[0])
-    if len(s)>1 and s[0:2] == '()':
-        raise NotExpected(')')
 
     i = 0
     while i < len(s):
@@ -215,6 +213,8 @@ def cmd_parse(s, mode=SPLIT_SHELL32|CMD_VAREXPAND):
             last_opened = parenthesis.pop()
             # replaces parenthesized trait with a single argument
             argv[last_opened:] = [''.join(argv[last_opened:])+')']
+            if argv[-1] == '()':
+                raise NotExpected('()')
             continue
         # %VAR%   -> replace with os.environ['VAR'] *if set* and even if quoted
         # ^%VAR%  -> same as above
@@ -294,8 +294,8 @@ def cmd_parse(s, mode=SPLIT_SHELL32|CMD_VAREXPAND):
         raise NotExpected('(')
     return argv
 
-def cmd_split(s, mode=SPLIT_SHELL32):
-    "Post-process with split a command line parsed by cmd_parse (mimic mslex behavior)"
+def cmd_split(s, mode=SPLIT_SHELL32|CMD_VAREXPAND):
+    "Post-process with split a command line parsed by cmd_parse"
     argv = []
     for tok in cmd_parse(s, mode):
         if tok in ('@','<','|','>','<<','>>','&','&&','||'):
