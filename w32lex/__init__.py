@@ -1,6 +1,6 @@
 COPYRIGHT = '''Copyright (C)2024, by maxpat78.'''
 
-__version__ = '1.0.3'
+__version__ = '1.0.5'
 
 import os
 
@@ -151,26 +151,33 @@ def join(argv):
     "Quote and join list items, so that split returns the same"
     return ' '.join([quote(arg) for arg in argv])
 
+
+
+#
+# cmd_ function are an attempt to provide a lexer/parser/tokenizer for Windows CMD
+#
+
 def cmd_parse(s, mode=SPLIT_SHELL32|CMD_VAREXPAND):
     "Pre-process a command line like Windows CMD Command Prompt"
     escaped = 0
     quoted = 0
     percent = 0
     exclamation = 0
-    meta = 0 # special chars in a row
+    leftP = [] # opened-closed parenthesis (position)
+    rightP = []
     arg = ''
     argv = []
 
-    # is it right? handle ^CRLF?
-    s = s.strip('\r\n')
+    # ignore CR, should handle LF?
+    s = s.replace('\r','')
 
     # remove (ignore) some leading chars
     for c in ' ;,=\t\x0B\x0C\xFF': s = s.lstrip(c)
     
     if not s or s[0] == ':': return []
     
-    # push special batch char
-    if  s[0] == '@':
+    # push and strip special "line echo off" char
+    while s[0] == '@':
         argv = ['@']
         s = s[1:]
     # some combinations at line start are prohibited
@@ -192,6 +199,14 @@ def cmd_parse(s, mode=SPLIT_SHELL32|CMD_VAREXPAND):
                 escaped = 0
             else:
                 escaped = 1
+            continue
+        if c in '()' and not (escaped or quoted):
+            if arg:
+                argv += [arg]
+                arg = ''
+            argv += [c]
+            o = (leftP,rightP)[c==')']
+            o += [len(argv)-1]
             continue
         # %VAR%   -> replace with os.environ['VAR'] *if set* and even if quoted
         # ^%VAR%  -> same as above
@@ -222,27 +237,38 @@ def cmd_parse(s, mode=SPLIT_SHELL32|CMD_VAREXPAND):
                 continue
             exclamation = i # record exclamation mark position
             continue
-        # pipe, redirection, &, && and ||: break argument, and set aside special char/couple
-        # multiple pipe, redirection, &, && and || in sequence are forbidden
-        # TODO: recognize handle redirection "n>" and "n>&m"
+        # <,>,>>,&,&&,|,|| w/o blanks delimit 2 args
+        # " n>>&m" is the longest symbolic redirection
+        if c in '012' and s[i-2] == ' ' and i < len(s) and s[i] in '<>':
+            n=i+1 # index of next char in sequence
+            if s[i] == '>' and n < len(s) and s[n] == '>': # optional 2nd >
+                n+=1
+            # note: cmd recognizes n>^&m as valid as n>&m (!)
+            if n+3 < len(s) and s[n] == '^' and s[n+1] == '&' and s[n+2] in '012':
+                n+=3
+            if n+2 < len(s) and s[n] == '&' and s[n+1] in '012':
+                n+=2
+            if arg: argv += [arg]
+            arg = ''
+            argv += [s[i-1:n].replace('^','')] # eventually fix weird case above
+            i = n
+            continue
         if c in '|<>&':
             if escaped or quoted:
                 arg += c
                 escaped = 0
                 continue
-            meta += 1
-            # 3 specials in a row is forbidden
-            if meta == 3: raise NotExpected(c)
-            # if 2 specials undoubled
-            if len(argv) >= 2 and argv[-1] in '|<>&' and c != argv[-1]: raise NotExpected(c)
-            # push argument, if any, and special char/couple
             if arg: argv += [arg]
-            argv += [c]
-            # if doubled operator: ||, <<, >>, &&
-            if i < len(s) and s[i] == c:
-                argv[-1] = 2*c
-                i += 1
-                meta += 1
+            arg = ''
+            if i < len(s) and s[i] != '<' and s[i] == c: # if doubled
+                arg = 2*c
+                i+=1
+            else:
+                arg += c
+            if arg in ('>','<','>>','<<') and i < len(s) and s[i] == '&' and s[i+1] in '012': # if valid handle redir
+                arg += '&'+s[i+1]
+                i+=2
+            argv += [arg]
             arg = ''
             continue
         if c in ' ,;=\t':
@@ -252,11 +278,22 @@ def cmd_parse(s, mode=SPLIT_SHELL32|CMD_VAREXPAND):
                 argv += [c]
                 escaped = 0
                 continue
-        else:
-            meta = 0
         arg += c
         escaped = 0
-    argv += [arg]
+    if arg: argv += [arg]
+    # if parenthesis are not balanced
+    if len(rightP) != len(leftP):
+        raise NotExpected(('(',')')[len(rightP)>len(leftP)])
+    if leftP:
+        # replace from innermost couple
+        leftP = list(reversed(leftP))
+        rightP = list(reversed(rightP))
+        l = len(leftP)-1
+        for i in range(l+1):
+            j = leftP[i]
+            k = rightP[l-i]
+            # replace list items with their concatenation
+            argv[j:k+1] = [''.join(argv[j:k+1])]
     return argv
 
 def cmd_split(s, mode=SPLIT_SHELL32):

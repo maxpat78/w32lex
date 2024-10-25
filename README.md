@@ -65,28 +65,39 @@ void main() {
 The results we see, show that the parsing work CMD carries on is not trivial,
 not always clear and not constant in time. Some points:
 
-- `:` at line start makes the parser ignore the rest (Windows 2000+) or signal
-an error;
+- `:` at line start (the label indicator in batch files) makes the parser ignore
+the rest (Windows 2000+) or signal an error;
 - one or more ` ;,=@`,  _TAB_, vertical TAB, form-feed and 0xFF characters at
 line start are ignored but
 - a starting `@` is a special character in BAT scripts (=line echo off);
-- `|&<>`, and their doubled counterparts, are forbidden at line start;
+- carriage-return character is ignored;
+- `|&<>`, and their doubled counterparts (except `<<` which is invalid), are
+forbidden at line start;
 - `()` at line start is forbidden;
+- `(command)` with one ore more _balanced_ parenthesis is a valid form;
 - `^` escapes the character following; alone at line start, it should be
 forbidden (it asks for a second character to escape).
 - `"` starts a quoted block, escaping all special characters inside it except
 `%` , until another quote, or LF/EOS, is found. Quote belongs to the block
-and only the starting quote can be escaped by `^`.
-- pipe `|`, redirection `<, <<, >, >>` and boolean operators `&, &&, ||` split
-a line in subparts, since one or more commands have to be issued; white space
+and only the starting quote can be escaped by `^`;
+- after a `REM` command, all special symbols are ignored;
+- pipe `|`, redirection `<, >, >>`, concatenation `&` and boolean operators `&&, ||`
+split a line in subparts, since one or more commands have to be issued; white space
 is not needed around them;
-- longer or different sequences of pipe, redirection or boolean operators are
-forbidden;
+- many handle redirections are also permitted, with 0=STDIN, 1=STDOUT, 2=STDERR and
+a `&` premitted after the redirection operator (i.e. `2>&1` to redirect STDERR
+to STDOUT, or `2>err.log` to copy STDERR to a file);
+- longer or different sequences of pipe, redirection, concatenation or boolean
+operators are forbidden;
 - `%var%` or `^%var%` are replaced with the corresponding environment variable,
 if set (while `^%var^%` and `%var^%` are both considered fully escaped);
 - all the other characters are simply copied and passed to the external
 commands. If the internal ones are targeted, further/different processing could
-occur; the same if special CMD environment variables are set.
+occur; the same if special CMD environment variables are set. For example,
+`SET A   =B` sets a variable named `A   ` (included the 3 blanks); `FOR` assigns
+special meaning to single quotes inside parenthesis; `REM` ignores subsequent
+tokens.
+  
 
 Some curious samples:
 - `&a [b (c ;d !e %f ^g ,h =i` are valid file system names
@@ -99,14 +110,16 @@ Some curious samples:
   * `dir ";d"` -> OK
   * `dir "?d"` -> OK
 - `dir ^>b` -> lists `[b` file above (!?), but using our simple Windows app we
-find that `>b` was passed literally, as expected
+find that `>b` was passed literally, as expected;
+- `dir 1>^&2` is as valid as `dir 1>&2`.
 
 Things get even more complex if we take in account old DOS COMMAND.COM:
-- a starting `@` outside BAT files is forbidden
-- `^` is not recognized
-- only a single `;,=` at line start is ignored
-- `:` at line start is ignored (Windows 95+) or is bad
-- `&, &&, ||` operators and parentheses `()` are not recognized
+- a starting `@` outside BAT files is forbidden;
+- `^` is not recognized;
+- only a single `;,=` at line start is ignored;
+- `:` at line start is ignored (Windows 95+) or is bad;
+- `&, &&, ||` operators and parentheses `()` are not recognized;
+- numeric handles redirection and delayed expansion is unsupported, also.
 
 A sample assembly program to play with old DOS command line:
 ```
