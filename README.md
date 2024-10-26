@@ -70,6 +70,9 @@ the rest (Windows 2000+) or signal an error;
 - one or more ` ;,=@`,  _TAB_, vertical TAB, form-feed and 0xFF characters at
 line start are ignored but
 - a starting `@` is a special character in BAT scripts (=line echo off);
+- `a/b` at line start (without white space) is parsed as `a /b` (invoke "a"
+command with "/b" option), even if an ".\a\b" command exists - to invoke the
+latter, just quote it: `"a/b"`;
 - carriage-return character is ignored;
 - `|&<>`, and their doubled counterparts (except `<<` which is invalid), are
 forbidden at line start;

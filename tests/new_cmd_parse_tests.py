@@ -1,5 +1,8 @@
 from w32lex import *
 
+print(cmd_parse('a/b'))
+print(cmd_parse('"a/b"'))
+print(cmd_parse('a b/c'))
 print(cmd_parse('a >b c'))
 print(cmd_parse('a >>b c'))
 print(cmd_parse('a <<b c'))

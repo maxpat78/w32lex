@@ -1,6 +1,6 @@
 COPYRIGHT = '''Copyright (C)2024, by maxpat78.'''
 
-__version__ = '1.0.7'
+__version__ = '1.0.8'
 
 import os
 
@@ -56,7 +56,10 @@ def split(s, mode=SPLIT_SHELL32):
     if not s: return argv
     
     # Special rules:
-    # Quotes: " open block; "" open and close block; """ open, add literal " and close block
+    # Quotes (consecutive or not):
+    #  " open block;
+    #  "" open and close block;
+    #  """ open, add literal " and close block (not VC Runtime 2005+)
     # Backslashes, if followed by ":
     #  2n -> n, and open/close block
     #  (2n+1) -> n, and add literal "
@@ -216,11 +219,18 @@ def cmd_parse(s, mode=SPLIT_SHELL32|CMD_VAREXPAND):
             if argv[-1] == '()':
                 raise NotExpected('()')
             continue
+        # at line start: abcd/e -> acd /e
+        if c == '/' and not (argv or quoted or ' ' in arg):
+            argv += [arg+' ']
+            arg = c
+            continue
         # %VAR%   -> replace with os.environ['VAR'] *if set* and even if quoted
         # ^%VAR%  -> same as above
         # %VAR^%
         # ^%VAR^% -> keep literal %VAR%
         # %%VAR%% -> replace internal %VAR% only
+        # NOTE: batch arguments %0..%9 and %* should be recognized?
+        # TBD: FOR parsing, %G and %%G and tilded vars
         if c == '%' and (mode&CMD_VAREXPAND):
             arg += c
             if percent and percent != i-1:
